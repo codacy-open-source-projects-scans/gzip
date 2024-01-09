@@ -1,6 +1,6 @@
 /* unpack.c -- decompress files in pack format.
 
-   Copyright (C) 1997, 1999, 2006, 2009-2023 Free Software Foundation, Inc.
+   Copyright (C) 1997, 1999, 2006, 2009-2024 Free Software Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
    This program is free software; you can redistribute it and/or modify
@@ -221,6 +221,7 @@ unpack (int in, int out)
     unsigned eob;           /* End Of Block code */
     register unsigned peek; /* lookahead bits */
     unsigned peek_mask;     /* Mask for peek_bits bits */
+    off_t orig_bytes_out = bytes_out;
 
     ifd = in;
     ofd = out;
@@ -266,7 +267,7 @@ unpack (int in, int out)
     } /* for (;;) */
 
     flush_window();
-    if (orig_len != (ulg)(bytes_out & 0xffffffff)) {
+    if (orig_len != (ulg)((bytes_out - orig_bytes_out) & 0xffffffff)) {
         gzip_error ("invalid compressed data--length error");
     }
     return OK;

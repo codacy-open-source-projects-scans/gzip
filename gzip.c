@@ -1,6 +1,6 @@
 /* gzip (GNU zip) -- compress files with zip algorithm and 'compress' interface
 
-   Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2023 Free Software
+   Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2024 Free Software
    Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
@@ -29,7 +29,7 @@
  */
 
 static char const *const license_msg[] = {
-"Copyright (C) 2023 Free Software Foundation, Inc.",
+"Copyright (C) 2024 Free Software Foundation, Inc.",
 "Copyright (C) 1993 Jean-loup Gailly.",
 "This is free software.  You may redistribute copies of it under the terms of",
 "the GNU General Public License <https://www.gnu.org/licenses/gpl.html>.",
@@ -788,7 +788,6 @@ treat_stdin ()
 
         method = get_method(ifd);
         if (method < 0) return; /* error message already emitted */
-        bytes_out = 0;            /* required for length check */
     }
 
     if (list)
@@ -995,7 +994,6 @@ treat_file (char *iname)
 
         method = get_method(ifd);
         if (method < 0) break;    /* error message already emitted */
-        bytes_out = 0;            /* required for length check */
     }
 
     if (close (ifd) != 0)
