@@ -53,7 +53,7 @@ EXTRA_DIST = $(ACINCLUDE_INPUTS) $(man_MANS) \
   tailor.h \
   zcat.in zcmp.in zdiff.in \
   zegrep.in zfgrep.in zforce.in zgrep.in zless.in zmore.in znew.in
-noinst_HEADERS = gzip.h lzw.h
+noinst_HEADERS = deflate.h gzip.h lzw.h
 
 bin_PROGRAMS = gzip
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
@@ -73,6 +73,7 @@ BUILT_SOURCES += version.c
 version.c: Makefile
 	$(AM_V_GEN)rm -f $@
 	$(AM_V_at)printf '#include <config.h>\n' > $@t
+	$(AM_V_at)printf '#include "version.h"\n' >> $@t
 	$(AM_V_at)printf 'char const *Version = "$(PACKAGE_VERSION)";\n' >> $@t
 	$(AM_V_at)chmod a-w $@t
 	$(AM_V_at)mv $@t $@
