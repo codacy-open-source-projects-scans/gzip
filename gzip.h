@@ -16,8 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef __STDC__
    typedef void *voidp;
@@ -281,7 +280,7 @@ _Noreturn extern void finish_up_gzip (int);
 _Noreturn extern void abort_gzip (void);
 
         /* in deflate.c */
-extern off_t deflate (int pack_level);
+extern off_t gzip_deflate (int pack_level);
 
         /* in trees.c */
 extern void ct_init     (ush *attr, int *method);
@@ -324,7 +323,7 @@ _Noreturn extern void write_error (void);
 extern void display_ratio (off_t num, off_t den, FILE *file);
 
         /* in inflate.c */
-extern int inflate (void);
+extern int gzip_inflate (void);
 
         /* in dfltcc.c */
 #ifdef IBM_Z_DFLTCC

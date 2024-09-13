@@ -13,9 +13,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ALL_RECURSIVE_TARGETS =
 BUILT_SOURCES =
@@ -62,8 +61,8 @@ gzip_SOURCES = \
   bits.c deflate.c gzip.c inflate.c \
   trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
 gzip_LDADD = libver.a lib/libgzip.a
-gzip_LDADD += $(LIB_CLOCK_GETTIME) $(LIB_FDATASYNC)
-# gnulib-tool also recommends $(LIB_MBRTOWC) and $(LIBINTL), but
+gzip_LDADD += $(CLOCK_TIME_LIB) $(FDATASYNC_LIB)
+# gnulib-tool also recommends $(MBRTOWC_LIB) and $(LIBINTL), but
 # modules needing those libraries are avoided so the libraries can be omitted.
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c

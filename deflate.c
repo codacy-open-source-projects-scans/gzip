@@ -14,8 +14,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /*
  *  PURPOSE
@@ -68,7 +67,7 @@
  *      void lm_init (int pack_level, ush *flags)
  *          Initialize the "longest match" routines for a new file
  *
- *      off_t deflate ()
+ *      off_t gzip_deflate ()
  *          Processes a new input file and return its compressed length. Sets
  *          the compressed length, crc, deflate flags and internal file
  *          attributes.
@@ -723,7 +722,7 @@ deflate_fast ()
  * no better match at the next window position.
  */
 off_t
-deflate (int pack_level)
+gzip_deflate (int pack_level)
 {
     IPos hash_head;          /* head of hash chain */
     IPos prev_match;         /* previous match */

@@ -14,8 +14,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Not copyrighted 1992 by Mark Adler
    version c10p1, 10 January 1993 */
@@ -178,7 +177,7 @@ static ush cpdext[] = {         /* Extra bits for distance codes */
 
 
 
-/* Macros for inflate() bit peeking and grabbing.
+/* Macros for gzip_inflate () bit peeking and grabbing.
    The usage is:
 
         NEEDBITS(j)
@@ -514,7 +513,7 @@ huft_free(struct huft *t)
 
 /* tl, td:   literal/length and distance decoder tables */
 /* bl, bd:   number of bits decoded by tl[] and td[] */
-/* inflate (decompress) the codes in a deflated (compressed) block.
+/* gzip_inflate (decompress) the codes in a deflated (compressed) block.
    Return an error code or zero if it all goes ok. */
 static int
 inflate_codes(struct huft *tl, struct huft *td, int bl, int bd)
@@ -955,7 +954,7 @@ static int inflate_block(int *e)
 
 
 int
-inflate ()
+gzip_inflate ()
 /* decompress an inflated entry */
 {
   int e;                /* last block flag */

@@ -13,8 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
@@ -321,18 +320,18 @@ dfltcc_deflate (int pack_level)
 {
   /* Check whether we can use hardware compression.  */
   if (!is_dfltcc_enabled () || getenv ("SOURCE_DATE_EPOCH"))
-    return deflate (pack_level);
+    return gzip_deflate (pack_level);
   char const *s = getenv ("DFLTCC_LEVEL_MASK");
   unsigned long level_mask
     = s && *s ? strtoul (s, NULL, 0) : DFLTCC_LEVEL_MASK;
   if ((level_mask & (1 << pack_level)) == 0)
-    return deflate (pack_level);
+    return gzip_deflate (pack_level);
   union aligned_dfltcc_qaf_param ctx;
   dfltcc_qaf (&ctx.af);
   if (!is_bit_set (ctx.af.fns, DFLTCC_CMPR)
       || !is_bit_set (ctx.af.fns, DFLTCC_GDHT)
       || !is_bit_set (ctx.af.fmts, DFLTCC_FMT0))
-    return deflate (pack_level);
+    return gzip_deflate (pack_level);
 
   /* Initialize tuning parameters.  */
   s = getenv ("DFLTCC_BLOCK_SIZE");
@@ -417,11 +416,11 @@ dfltcc_inflate ()
 {
   /* Check whether we can use hardware decompression.  */
   if (!is_dfltcc_enabled ())
-    return inflate ();
+    return gzip_inflate ();
   union aligned_dfltcc_qaf_param ctx;
   dfltcc_qaf (&ctx.af);
   if (!is_bit_set (ctx.af.fns, DFLTCC_XPND))
-    return inflate ();
+    return gzip_inflate ();
 
   union aligned_dfltcc_param_v0 ctx_v0;
   struct dfltcc_param_v0 *param = init_param (&ctx_v0);
