@@ -1,6 +1,6 @@
 /* unzip.c -- decompress files in gzip or pkzip format.
 
-   Copyright (C) 1997-1999, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-1999, 2009-2025 Free Software Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
    This program is free software; you can redistribute it and/or modify
@@ -32,29 +32,99 @@
 #include "gzip.h"
 
 /* PKZIP header definitions */
-#define LOCSIG 0x04034b50L      /* four-byte lead-in (lsb first) */
+#define SPNSIG 0x08074b50L      /* spanned zip file segment marker */
+#define ONESIG 0x30304b50L      /* was spanned but re-marked as one segment */
+#define Z64SIG 0x06064b50L      /* zip64 end record */
+#define ENDSIG 0x06054b50L      /* end record */
+#define DATSIG 0x08074b50L      /* data descriptor (yes, same as span sig) */
+#define LOCSIG 0x04034b50L      /* local header */
 #define LOCFLG 6                /* offset of bit flag */
 #define  CRPFLG 1               /*  bit for encrypted entry */
 #define  EXTFLG 8               /*  bit for extended local header */
 #define LOCHOW 8                /* offset of compression method */
-/* #define LOCTIM 10               UNUSED file mod time (for decryption) */
+/* #define LOCTIM 10               UNUSED file mod time */
 #define LOCCRC 14               /* offset of crc */
 #define LOCSIZ 18               /* offset of compressed size */
 #define LOCLEN 22               /* offset of uncompressed length */
 #define LOCFIL 26               /* offset of file name field length */
 #define LOCEXT 28               /* offset of extra field length */
 #define LOCHDR 30               /* size of local header, including sig */
-#define EXTHDR 16               /* size of extended local header, inc sig */
-#define RAND_HEAD_LEN  12       /* length of encryption random header */
+#define EXTHDR 24               /* Max size of data descriptor, incl. sig.  */
+
+/* Macro for getting an eight-byte header value */
+#define L8(p) ((off_t) LG (p) | ((off_t) LG ((p) + 4) << 32))
 
 
 /* Globals */
 
 ulg unzip_crc;  /* CRC found by 'unzip'.  */
 
-static int decrypt;        /* flag to turn on decryption */
 static int pkzip = 0;      /* set for a pkzip file */
 static int ext_header = 0; /* set if extended local header */
+static ulg orig_crc;       /* CRC from gzip trailer or zip local header */
+static ulg orig_len;       /* uncompressed length from trailer or header */
+
+/* Check zip file and advance inptr to the start of the compressed data.
+   Return a null pointer on success, a diagnostic string otherwise.  */
+static char const *
+bad_zipfile (void)
+{
+  static char const bad[] = "not a valid zip file";
+  if (insize - inptr < 4)
+    return bad;
+  uch *h = inbuf + inptr;
+  ulg sig = LG (h);
+  if (sig == SPNSIG || sig == ONESIG)
+    {
+      /* skip spanning signature */
+      h += 4;
+      inptr += 4;
+      if (insize - inptr < 4)
+        return bad;
+      sig = LG (h);
+    }
+  if (sig == ENDSIG || sig == Z64SIG)
+    return "is an empty zip file";
+  if (sig != LOCSIG || insize - inptr < LOCHDR)
+    /* not a local header */
+    return bad;
+  inptr += LOCHDR;
+
+  /* Get compression method */
+  method = SH (h + LOCHOW);
+  if (method != STORED && method != DEFLATED)
+    return "first entry not deflated or stored -- use unzip";
+
+  /* Check for encryption */
+  if ((h[LOCFLG] & CRPFLG) != 0)
+    return "encrypted file -- use unzip";
+
+  /* Save header information for unzip() */
+  ext_header = (h[LOCFLG] & EXTFLG) != 0;
+  orig_crc = LG (h + LOCCRC);
+  orig_len = LG (h + LOCLEN);
+  if (method == STORED && (ext_header || orig_len != LG (h + LOCSIZ)))
+    return bad;
+  if (!ext_header && orig_len == 0xffffffff)
+    return "Zip64 entry -- not supported, use unzip";
+
+  /* Get ofname and timestamp from local header (to be done) */
+
+  /* Skip over the file name and extra field (need to loop for the
+     SMALL_MEM case) */
+  ulg skip = (ulg) SH (h + LOCFIL) + (ulg) SH (h + LOCEXT);
+  while (insize - inptr < skip)
+    {
+      skip -= insize - inptr;
+      fill_inbuf (0);          /* Will error out on no more input.  */
+      inptr = 0;
+    }
+  inptr += skip;
+
+  /* Good local header */
+  pkzip = 1;
+  return NULL;
+}
 
 /* ===========================================================================
  * Check zip file and advance inptr to the start of the compressed data.
@@ -64,41 +134,16 @@ static int ext_header = 0; /* set if extended local header */
 int
 check_zipfile (int in)
 {
-    uch *h = inbuf + inptr; /* first local header */
-
     ifd = in;
+    char const *bad = bad_zipfile ();
 
-    /* Check validity of local header, and skip name and extra fields */
-    inptr += LOCHDR + SH(h + LOCFIL) + SH(h + LOCEXT);
-
-    if (inptr > insize || LG(h) != LOCSIG) {
-        fprintf(stderr, "\n%s: %s: not a valid zip file\n",
-                program_name, ifname);
+    if (bad)
+      {
+        fprintf (stderr, "\n%s: %s: %s\n", program_name, ifname, bad);
         exit_code = ERROR;
         return ERROR;
-    }
-    method = h[LOCHOW];
-    if (method != STORED && method != DEFLATED) {
-        fprintf(stderr,
-                "\n%s: %s: first entry not deflated or stored -- use unzip\n",
-                program_name, ifname);
-        exit_code = ERROR;
-        return ERROR;
-    }
+      }
 
-    /* If entry encrypted, decrypt and validate encryption header */
-    if ((decrypt = h[LOCFLG] & CRPFLG) != 0) {
-        fprintf(stderr, "\n%s: %s: encrypted file -- use unzip\n",
-                program_name, ifname);
-        exit_code = ERROR;
-        return ERROR;
-    }
-
-    /* Save flags for unzip() */
-    ext_header = (h[LOCFLG] & EXTFLG) != 0;
-    pkzip = 1;
-
-    /* Get ofname and timestamp from local header (to be done) */
     return OK;
 }
 
@@ -114,10 +159,8 @@ check_zipfile (int in)
 int
 unzip (int in, int out)
 {
-    ulg orig_crc = 0;       /* original crc */
-    ulg orig_len = 0;       /* original uncompressed length */
     off_t orig_bytes_out = bytes_out;
-    int n;
+    int n;                  /* Number of bytes in buf.  */
     uch buf[EXTHDR];        /* extended local header */
     int err = OK;
 
@@ -125,11 +168,6 @@ unzip (int in, int out)
     ofd = out;
 
     updcrc(NULL, 0);           /* initialize crc */
-
-    if (pkzip && !ext_header) {  /* crc and length at the end otherwise */
-        orig_crc = LG(inbuf + LOCCRC);
-        orig_len = LG(inbuf + LOCLEN);
-    }
 
     /* Decompress */
     if (method == DEFLATED)  {
@@ -148,13 +186,7 @@ unzip (int in, int out)
 
     } else if (pkzip && method == STORED) {
 
-        register ulg n = LG(inbuf + LOCLEN);
-
-        if (n != LG(inbuf + LOCSIZ) - (decrypt ? RAND_HEAD_LEN : 0)) {
-
-            fprintf(stderr, "len %lu, siz %lu\n", n, LG(inbuf + LOCSIZ));
-            gzip_error ("invalid compressed data--length mismatch");
-        }
+        register ulg n = orig_len;
         while (n--) {
             uch c = (uch)get_byte();
             put_ubyte(c);
@@ -164,56 +196,114 @@ unzip (int in, int out)
         gzip_error ("internal error, invalid method");
     }
 
-    /* Get the crc and original length */
-    if (!pkzip) {
-        /* crc32  (see algorithm.doc)
-         * uncompressed input size modulo 2^32
-         */
-        for (n = 0; n < 8; n++) {
-            buf[n] = (uch)get_byte(); /* may cause an error if EOF */
-        }
-        orig_crc = LG(buf);
-        orig_len = LG(buf+4);
+    /* Uncompressed data CRC and length.  */
+    ulg crc = getcrc ();
+    off_t len = bytes_out - orig_bytes_out;
 
-    } else if (ext_header) {  /* If extended header, check it */
-        /* signature - 4bytes: 0x50 0x4b 0x07 0x08
-         * CRC-32 value
-         * compressed size 4-bytes
-         * uncompressed size 4-bytes
-         */
+    if (ext_header)
+      {
+        /* Validate the zip data descriptor, as follows:
+           - optional signature - 0 bytes or 4 bytes: 0x50 0x4b 0x07 0x08
+           - CRC-32 value - 4 bytes
+           - compressed size - 4 bytes or 8 bytes
+           - uncompressed size - length same as compressed size (4 or 8)
+        */
         for (n = 0; n < EXTHDR; n++) {
-            buf[n] = (uch)get_byte(); /* may cause an error if EOF */
+            int i = try_byte ();
+            if (i == EOF)
+              break;
+            buf[n] = (uch) i;
         }
-        orig_crc = LG(buf+4);
-        orig_len = LG(buf+12);
-    }
 
-    /* Validate decompression */
-    if (orig_crc != updcrc(outbuf, 0)) {
-        fprintf(stderr, "\n%s: %s: invalid compressed data--crc error\n",
-                program_name, ifname);
-        err = ERROR;
-    }
-    if (orig_len != (ulg)((bytes_out - orig_bytes_out) & 0xffffffff)) {
-        fprintf(stderr, "\n%s: %s: invalid compressed data--length error\n",
-                program_name, ifname);
-        err = ERROR;
+        /* Try all four possibilities, from longest to shortest.
+           D is the length of the valid data descriptor, or 0 if invalid.  */
+        int d = ((24 <= n && LG (buf) == DATSIG && LG (buf + 4) == crc
+                  && L8 (buf + 16) == len)
+                 ? 24
+                 : 20 <= n && LG (buf) == crc && L8 (buf + 12) == len
+                 ? 20
+                 : (16 <= n && LG (buf) == DATSIG && LG (buf + 4) == crc
+                    && (off_t) LG (buf + 12) == len)
+                 ? 16
+                 : 12 <= n && LG (buf) == crc && (off_t) LG (buf + 8) == len
+                 ? 12
+                 : 0);
+        if (d)
+          {
+            /* Move the data after the descriptor to the start of buf.  */
+            int i = 0;
+            while (d < n)
+                buf[i++] = buf[d++];
+            n = i;
+          }
+        else
+          {
+            fprintf (stderr,
+                     "\n%s: %s: invalid compressed data--crc/length error\n",
+                     program_name, ifname);
+            err = ERROR;
+          }
+      }
+    else
+      {
+        /* Check crc and length in the gzip trailer or zip local header.  */
+        if (!pkzip)
+          {
+            /* crc32 (see algorithm.doc)
+               Uncompressed input size modulo 2^32.  */
+            for (n = 0; n < 8; n++)
+              buf[n] = (uch) get_byte (); /* May cause an error if EOF.  */
+            orig_crc = LG (buf);
+            orig_len = LG (buf + 4);
+            len &= 0xffffffff;          /* compare modulo 2^32 */
+          }
+        n = 0;
+
+        /* Validate decompression */
+        if (orig_crc != crc)
+          {
+            fprintf (stderr,
+                     "\n%s: %s: invalid compressed data--crc error\n",
+                     program_name, ifname);
+            err = ERROR;
+          }
+        if ((off_t) orig_len != len)
+          {
+            fprintf (stderr,
+                     "\n%s: %s: invalid compressed data--length error\n",
+                     program_name, ifname);
+            err = ERROR;
+          }
     }
 
     /* Check if there are more entries in a pkzip file */
-    if (pkzip && inptr + 4 < insize && LG(inbuf+inptr) == LOCSIG) {
-        if (to_stdout) {
-            WARN((stderr,
-                  "%s: %s has more than one entry--rest ignored\n",
-                  program_name, ifname));
-        } else {
-            /* Don't destroy the input zip file */
-            fprintf(stderr,
-                    "%s: %s has more than one entry -- unchanged\n",
-                    program_name, ifname);
-            err = ERROR;
-        }
-    }
+    if (pkzip)
+      {
+        while (n < 4)
+          {
+            int i = try_byte ();
+            if (i == EOF)
+              break;
+            buf[n++] = (uch) i;
+          }
+        if (n >= 4 && LG (buf) == LOCSIG)
+          {
+            /* There are more entries.  */
+            if (to_stdout)
+              WARN ((stderr,
+                     "%s: %s has more than one entry--rest ignored\n",
+                     program_name, ifname));
+            else
+              {
+                /* Don't destroy the input zip file.  */
+                fprintf (stderr,
+                         "%s: %s has more than one entry -- unchanged\n",
+                         program_name, ifname);
+                err = ERROR;
+              }
+          }
+      }
+
     ext_header = pkzip = 0; /* for next file */
     unzip_crc = orig_crc;
     if (err == OK) return OK;

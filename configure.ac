@@ -1,6 +1,6 @@
 # Configure template for gzip.
 
-# Copyright (C) 1999-2002, 2006-2007, 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 1999-2002, 2006-2007, 2009-2025 Free Software Foundation, Inc.
 
 # Copyright (C) 1992-1993 Jean-loup Gailly
 
@@ -50,6 +50,8 @@ AC_PROG_CPP
 AC_PROG_GREP
 AC_CHECK_PROG([LESS], [less], [less])
 AM_CONDITIONAL([LESS], [test "$LESS"])
+AC_CHECK_PROG([MORE], [more], [more])
+AM_CONDITIONAL([MORE], [test "$MORE"])
 AC_CHECK_TOOL([NM], [nm], [nm])
 AC_PROG_LN_S
 AC_PROG_RANLIB

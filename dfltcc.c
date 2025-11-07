@@ -1,6 +1,6 @@
 /* dfltcc.c -- compress data using IBM Z DEFLATE COMPRESSION CALL
 
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <config.h>
 
+#include <errno.h>
 #include <stdlib.h>
 
 #ifdef HAVE_SYS_SDT_H
@@ -437,7 +438,9 @@ dfltcc_inflate ()
           if (fill_inbuf (1) == EOF)
             {
               /* Premature EOF.  */
-              return 2;
+              flush_outbuf ();
+              errno = 0;
+              read_error ();
             }
           inptr = 0;
         }

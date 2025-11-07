@@ -1,6 +1,6 @@
 /* util.c -- utility functions for gzip support
 
-   Copyright (C) 1997-1999, 2001-2002, 2006, 2009-2024 Free Software
+   Copyright (C) 1997-1999, 2001-2002, 2006, 2009-2025 Free Software
    Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
@@ -102,6 +102,11 @@ void clear_bufs()
     insize = inptr = 0;
     bytes_in = bytes_out = 0L;
 }
+
+/* fill_inbuf callers convert EOF to unsigned and back.
+   Although this is a no-op on all known platforms, C does not guarantee it.
+   Add a static check to be safer.  */
+static_assert ((int) (unsigned) EOF == EOF);
 
 /* ===========================================================================
  * Fill the input buffer. This is called only when the buffer is empty.
@@ -300,7 +305,7 @@ make_simple_name (char *name)
    If the vector would be empty, do not allocate storage,
    do not set *ARGCP and *ARGVP, and return NULL.  */
 
-#define SEPARATOR	" \t"	/* separators in env variable */
+#define SEPARATOR " \t" /* Separators in environment variable.  */
 
 char *add_envopt(
     int *argcp,          /* pointer to argc */
@@ -319,11 +324,12 @@ char *add_envopt(
     env_val = xstrdup (env_val);
 
     for (p = env_val; *p; nargc++ ) {        /* move through env_val */
-        p += strspn(p, SEPARATOR);	     /* skip leading separators */
+        p += strspn (p, SEPARATOR);      /* Skip leading separators.  */
         if (*p == '\0') break;
 
-        p += strcspn(p, SEPARATOR);	     /* find end of word */
-        if (*p) *p++ = '\0';		     /* mark it */
+        p += strcspn (p, SEPARATOR);     /* Find end of word.  */
+        if (*p)                          /* Mark it if found.  */
+          *p++ = '\0';
     }
     if (nargc == 0) {
         free(env_val);
@@ -342,9 +348,10 @@ char *add_envopt(
 
     /* Then copy the environment args */
     for (p = env_val; nargc > 0; nargc--) {
-        p += strspn(p, SEPARATOR);	     /* skip separators */
-        *(nargv++) = p;			     /* store start */
-        while (*p++) ;			     /* skip over word */
+        p += strspn (p, SEPARATOR);  /* skip separators */
+        *nargv++ = p;                /* store start */
+        while (*p++)                 /* skip over word */
+          continue;
     }
 
     *nargv = NULL;
@@ -395,5 +402,8 @@ void write_error()
 void
 display_ratio (off_t num, off_t den, FILE *file)
 {
-    fprintf(file, "%5.1f%%", den == 0 ? 0 : 100.0 * num / den);
+  if (den)
+    fprintf (file, "%5.1f%%", 100.0 * num / den);
+  else
+    fputs (" -Inf%", file);
 }

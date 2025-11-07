@@ -1,5 +1,5 @@
 ## Process this file with automake to create Makefile.in
-# Copyright 2010-2024 Free Software Foundation, Inc.
+# Copyright 2010-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,12 +29,14 @@ TESTS =					\
   pipe-output				\
   reproducible				\
   stdin					\
+  synchronous				\
   timestamp				\
   two-files				\
   trailing-nul				\
   unpack-invalid			\
   unpack-valid				\
   upper-suffix				\
+  unzip-valid				\
   write-error				\
   z-suffix				\
   zdiff					\
@@ -57,6 +59,12 @@ else
 ZLESS_PROG =
 endif
 
+if MORE
+ZMORE_PROG = zmore
+else
+ZMORE_PROG =
+endif
+
 built_programs = \
   gzip		\
   gunzip	\
@@ -69,7 +77,7 @@ built_programs = \
   zforce	\
   zgrep		\
   $(ZLESS_PROG)	\
-  zmore		\
+  $(ZMORE_PROG)	\
   znew
 
 TESTS_ENVIRONMENT =					\

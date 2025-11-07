@@ -1,6 +1,6 @@
 /* gzip.h -- common declarations for all gzip modules
 
-   Copyright (C) 1997-1999, 2001, 2006-2007, 2009-2024 Free Software
+   Copyright (C) 1997-1999, 2001, 2006-2007, 2009-2025 Free Software
    Foundation, Inc.
 
    Copyright (C) 1992-1993 Jean-loup Gailly.
@@ -69,7 +69,7 @@ extern int method;         /* compression method */
  * is done in window except for unlzw.
  */
 
-#ifndef	INBUFSIZ
+#ifndef INBUFSIZ
 #  ifdef SMALL_MEM
 #    define INBUFSIZ  0x2000  /* input buffer size */
 #  else
@@ -78,7 +78,7 @@ extern int method;         /* compression method */
 #endif
 #define INBUF_EXTRA  64     /* required by unlzw() */
 
-#ifndef	OUTBUFSIZ
+#ifndef OUTBUFSIZ
 #  ifdef SMALL_MEM
 #    define OUTBUFSIZ   8192  /* output buffer size */
 #  else
@@ -148,11 +148,11 @@ typedef int file_t;     /* Do not use stdio */
 #define NO_FILE  (-1)   /* in memory compression */
 
 
-#define	PACK_MAGIC     "\037\036" /* Magic header for packed files */
-#define	GZIP_MAGIC     "\037\213" /* Magic header for gzip files, 1F 8B */
-#define	OLD_GZIP_MAGIC "\037\236" /* Magic header for gzip 0.5 = freeze 1.x */
-#define	LZH_MAGIC      "\037\240" /* Magic header for SCO LZH Compress files*/
-#define PKZIP_MAGIC    "\120\113\003\004" /* Magic header for pkzip files */
+#define PACK_MAGIC     "\037\036" /* Magic header for packed files.  */
+#define GZIP_MAGIC     "\037\213" /* Magic header for gzip files, 1F 8B.  */
+#define OLD_GZIP_MAGIC "\037\236" /* Magic header for gzip 0.5 = freeze 1.x.  */
+#define LZH_MAGIC      "\037\240" /* Magic header for SCO LZH Compress.  */
+#define PKZIP_MAGIC    "\120\113" /* Magic header for pkzip files.  */
 
 /* gzip flag byte */
 #define ASCII_FLAG   0x01 /* bit 0 set: file probably ascii text */

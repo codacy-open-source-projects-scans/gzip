@@ -4,11 +4,50 @@ GNU gzip NEWS                                    -*- outline -*-
 
 ** Bug fixes
 
+  gzip -d no longer rejects PKZIP signatures, local header, and data
+  descriptors.  These can appear in well-formed streamed zip files.
+  [bug present since the beginning]
+
+  A use of uninitialized memory on some malformed inputs has been fixed.
+  [bug present since the beginning]
+
+** Changes in behavior
+
+  gzip -l now reports "-Inf%" instead of "0.0%" for the infinite
+  compression ratio of an empty file.
+
+
+* Noteworthy changes in release 1.14 (2025-04-09) [stable]
+
+** Bug fixes
+
+  'gzip -d' no longer omits the last partial output buffer when the
+  input ends unexpectedly on an IBM Z platform.
+  [bug introduced in gzip-1.11]
+
   'gzip -l' no longer misreports lengths of multimember inputs.
   [bug introduced in gzip-1.12]
 
   'gzip -S' now rejects suffixes containing '/'.
   [bug present since the beginning]
+
+** Changes in behavior
+
+  The GZIP environment variable is now silently ignored except for the
+  options -1 (--fast) through -9 (--best), --rsyncable, and --synchronous.
+  This brings gzip into line with more-cautious compressors like zstd
+  that limit environment variables' effect to relatively innocuous
+  performance issues.  You can continue to use scripts to specify
+  whatever gzip options you like.
+
+  'zmore' is no longer installed on platforms lacking 'more'.
+
+** Performance improvements
+
+  gzip now decompresses significantly faster by computing CRCs via a
+  slice by 8 algorithm, and faster yet on x86-64 platforms that
+  support pclmul instructions.
+
 
 * Noteworthy changes in release 1.13 (2023-08-19) [stable]
 
@@ -349,7 +388,7 @@ Major changes from 1.3.4 to 1.3.5
 * zgrep etc. scripts now port to POSIX 1003.1-2001 hosts.
 * zforce no longer assumes 14-byte file name length limit.
 * zless is now implemented using less and LESSOPEN, not zmore and PAGER.
-* assembly-language speedups reenabled; were mistakenly disabled in 1.3.
+* assembly-language speedups re-enabled; were mistakenly disabled in 1.3.
 
 Major changes from 1.3.3 to 1.3.4
 * Less output is lost when decompressing a truncated file.
@@ -444,7 +483,7 @@ Major changes from 1.1.1 to 1.1.2.
 * Do not display compression ratio when decompressing stdin.
 * In zmore.in, work around brain damaged stty -g (Ultrix).
 * Display a correct compression ratio for .Z files.
-* Added .z to .gz renaming script in INTALL.
+* Added .z to .gz renaming script in INSTALL.
 * Allow setting CFLAGS in configure.
 
 Major changes from 1.1 to 1.1.1.
@@ -606,7 +645,7 @@ Major changes form 0.5 to 0.6:
 
 ========================================================================
 
-Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2024 Free Software Foundation,
+Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2025 Free Software Foundation,
 Inc.
 Copyright (C) 1992, 1993 Jean-loup Gailly
 

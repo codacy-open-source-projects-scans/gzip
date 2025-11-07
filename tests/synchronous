@@ -1,7 +1,7 @@
 #!/bin/sh
-# Exercise the --list option.
+# Check that --synchronous works.
 
-# Copyright 2016-2025 Free Software Foundation, Inc.
+# Copyright 2025 Free Software Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,30 +19,9 @@
 
 . "${srcdir=.}/init.sh"; path_prepend_ ..
 
-echo zoology zucchini > in || framework_failure_
-cp in orig || framework_failure_
-
-gzip -l in && fail=1
-gzip -9 in || fail=1
-gzip -l in.gz >out1 || fail=1
-gzip -l in.gz | cat >out2 || fail=1
-compare out1 out2 || fail=1
-
-: >empty || framework_failure_
-gzip empty || fail=1
-gzip -l empty.gz >emptyout || fail=1
-case $(cat emptyout) in
-  *' -Inf% '*) ;;
-  *) cat smallout; fail=1;;
-esac
-
-echo '' >small || framework_failure_
-gzip small || fail=1
-cat small.gz small.gz >smallx2.gz || framework_failure_
-gzip -l smallx2.gz >smallout || fail=1
-case $(cat smallout) in
-  *' 2 '*' smallx2') ;;
-  *) cat smallout; fail=1;;
-esac
+printf anything > F || framework_failure_
+gzip --synchronous F || fail=1
+test ! -f F || fail=1
+test -f F.gz || fail=1
 
 Exit $fail

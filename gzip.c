@@ -1,6 +1,6 @@
 /* gzip (GNU zip) -- compress files with zip algorithm and 'compress' interface
 
-   Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2024 Free Software
+   Copyright (C) 1999, 2001-2002, 2006-2007, 2009-2025 Free Software
    Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
@@ -28,7 +28,7 @@
  */
 
 static char const *const license_msg[] = {
-"Copyright (C) 2024 Free Software Foundation, Inc.",
+"Copyright (C) 2025 Free Software Foundation, Inc.",
 "Copyright (C) 1993 Jean-loup Gailly.",
 "This is free software.  You may redistribute copies of it under the terms of",
 "the GNU General Public License <https://www.gnu.org/licenses/gpl.html>.",
@@ -207,7 +207,7 @@ static bool stdin_was_read;
 off_t bytes_in;             /* number of input bytes */
 off_t bytes_out;            /* number of output bytes */
 static off_t total_in;      /* input bytes for all files */
-static off_t total_out;	    /* output bytes for all files */
+static off_t total_out;     /* Output bytes for all files.  */
 char ifname[MAX_PATH_LEN]; /* input file name */
 char ofname[MAX_PATH_LEN]; /* output file name */
 static char dfname[MAX_PATH_LEN]; /* name of dir containing output file */
@@ -249,10 +249,6 @@ enum
   PRESUME_INPUT_TTY_OPTION = CHAR_MAX + 1,
   RSYNCABLE_OPTION,
   SYNCHRONOUS_OPTION,
-
-  /* A value greater than all valid long options, used as a flag to
-     distinguish options derived from the GZIP environment variable.  */
-  ENV_OPTION
 };
 
 static char const shortopts[] = "ab:cdfhH?klLmMnNqrS:tvVZ123456789";
@@ -277,7 +273,7 @@ static const struct option longopts[] =
     {"-presume-input-tty", no_argument, NULL, PRESUME_INPUT_TTY_OPTION},
     {"quiet",      0, 0, 'q'}, /* quiet mode */
     {"silent",     0, 0, 'q'}, /* quiet mode */
-    {"synchronous",0, 0, SYNCHRONOUS_OPTION},
+    {"synchronous",0, 0, SYNCHRONOUS_OPTION}, /* output data synchronously */
     {"recursive",  0, 0, 'r'}, /* recurse through directories */
     {"suffix",     1, 0, 'S'}, /* use given suffix instead of .gz */
     {"test",       0, 0, 't'}, /* test compressed file integrity */
@@ -306,7 +302,7 @@ static int  open_input_file (char *iname, struct stat *sbuf);
 static void discard_input_bytes (size_t nbytes, unsigned int flags);
 static int  make_ofname (void);
 static void shorten_name (char *name);
-static int  get_method (int in);
+static int get_method (int in, bool first);
 static void do_list (int method);
 static int  check_ofname (void);
 static void copy_stat (struct stat *ifstat);
@@ -430,6 +426,7 @@ int main (int argc, char **argv)
     argv_copy = argv;
     env = add_envopt (&env_argc, &argv_copy, OPTIONS_VAR);
     env_argv = env ? argv_copy : NULL;
+    opterr = !env;
 
 #ifndef GNU_STANDARD
 # define GNU_STANDARD 1
@@ -455,48 +452,35 @@ int main (int argc, char **argv)
 
     while (true) {
         int optc;
-        int longind = -1;
 
         if (env_argv)
           {
-            if (env_argv[optind] && strequ (env_argv[optind], "--"))
-              optc = ENV_OPTION + '-';
-            else
+            /* Get the next option taken from the GZIP environment variable
+               that affects only performance (including compression level).
+               Silently ignore other options, non-options, invalid options,
+               and option syntax errors, so that bad GZIP values do
+               not unduly interfere with normal gzip operation.  */
+            do
               {
                 optc = getopt_long (env_argc, env_argv, shortopts, longopts,
-                                    &longind);
-                if (0 <= optc)
-                  optc += ENV_OPTION;
-                else
+                                    NULL);
+                if (optc < 0)
                   {
-                    if (optind != env_argc)
-                      {
-                        fprintf (stderr,
-                                 ("%s: %s: non-option in "OPTIONS_VAR
-                                  " environment variable\n"),
-                                 program_name, env_argv[optind]);
-                        try_help ();
-                      }
-
-                    /* Wait until here before warning, so that GZIP='-q'
-                       doesn't warn.  */
-                    if (env_argc != 1 && !quiet)
-                      fprintf (stderr,
-                               ("%s: warning: "OPTIONS_VAR" environment variable"
-                                " is deprecated; use an alias or script\n"),
-                               program_name);
-
                     /* Start processing ARGC and ARGV instead.  */
                     free (env_argv);
                     env_argv = NULL;
+                    opterr = 1;
                     optind = 1;
-                    longind = -1;
+                    break;
                   }
               }
+            while (! (('1' <= optc && optc <= '9')
+                      || optc == RSYNCABLE_OPTION
+                      || optc == SYNCHRONOUS_OPTION));
           }
 
         if (!env_argv)
-          optc = getopt_long (argc, argv, shortopts, longopts, &longind);
+          optc = getopt_long (argc, argv, shortopts, longopts, NULL);
         if (optc < 0)
           break;
 
@@ -532,15 +516,12 @@ int main (int argc, char **argv)
         case 'M': /* undocumented, may change later */
             no_time = 0; break;
         case 'n':
-        case 'n' + ENV_OPTION:
             no_name = no_time = 1; break;
         case 'N':
-        case 'N' + ENV_OPTION:
             no_name = no_time = 0; break;
         case PRESUME_INPUT_TTY_OPTION:
             presume_input_tty = true; break;
         case 'q':
-        case 'q' + ENV_OPTION:
             quiet = 1; verbose = 0; break;
         case 'r':
 #if NO_DIR
@@ -553,7 +534,6 @@ int main (int argc, char **argv)
             break;
 
         case RSYNCABLE_OPTION:
-        case RSYNCABLE_OPTION + ENV_OPTION:
             rsync = 1;
             break;
         case 'S':
@@ -575,7 +555,6 @@ int main (int argc, char **argv)
             test = decompress = to_stdout = 1;
             break;
         case 'v':
-        case 'v' + ENV_OPTION:
             verbose++; quiet = 0; break;
         case 'V':
             version (); finish_out (); break;
@@ -584,28 +563,12 @@ int main (int argc, char **argv)
                     program_name);
             try_help ();
             break;
-        case '1' + ENV_OPTION:  case '2' + ENV_OPTION:  case '3' + ENV_OPTION:
-        case '4' + ENV_OPTION:  case '5' + ENV_OPTION:  case '6' + ENV_OPTION:
-        case '7' + ENV_OPTION:  case '8' + ENV_OPTION:  case '9' + ENV_OPTION:
-            optc -= ENV_OPTION;
-            FALLTHROUGH;
         case '1':  case '2':  case '3':  case '4':
         case '5':  case '6':  case '7':  case '8':  case '9':
             level = optc - '0';
             break;
 
         default:
-            if (ENV_OPTION <= optc && optc != ENV_OPTION + '?')
-              {
-                /* Output a diagnostic, since getopt_long didn't.  */
-                fprintf (stderr, "%s: ", program_name);
-                if (longind < 0)
-                  fprintf (stderr, "-%c: ", optc - ENV_OPTION);
-                else
-                  fprintf (stderr, "--%s: ", longopts[longind].name);
-                fprintf (stderr, ("option not valid in "OPTIONS_VAR
-                                  " environment variable\n"));
-              }
             try_help ();
         }
     } /* loop on all arguments */
@@ -771,7 +734,7 @@ treat_stdin ()
     stdin_was_read = true;
 
     if (decompress) {
-        method = get_method(ifd);
+        method = get_method (ifd, true);
         if (method < 0) {
             do_exit(exit_code); /* error message already emitted */
         }
@@ -786,7 +749,7 @@ treat_stdin ()
         if (input_eof ())
           break;
 
-        method = get_method(ifd);
+        method = get_method (ifd, false);
         if (method < 0) return; /* error message already emitted */
     }
 
@@ -952,7 +915,7 @@ treat_file (char *iname)
     part_nb = 0;
 
     if (decompress) {
-        method = get_method(ifd); /* updates ofname if original given */
+        method = get_method (ifd, true); /* Update ofname if original given.  */
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */
@@ -992,7 +955,7 @@ treat_file (char *iname)
         if (input_eof ())
           break;
 
-        method = get_method(ifd);
+        method = get_method (ifd, false);
         if (method < 0) break;    /* error message already emitted */
     }
 
@@ -1477,12 +1440,12 @@ discard_input_bytes (size_t nbytes, unsigned int flags)
  * Updates time_stamp if there is one and neither -m nor -n is used.
  * This function may be called repeatedly for an input file consisting
  * of several contiguous gzip'ed members.
- * 'in' is the input file descriptor.
+ * 'in' is the input file descriptor; 'first' is true for first call on 'in'.
  * IN assertions: there is at least one remaining compressed member.
  *   If the member is a zip file, it must be the only one.
  */
 static int
-get_method (int in)
+get_method (int in, bool first)
 {
     uch flags;     /* compression flags */
     uch magic[10]; /* magic header */
@@ -1498,7 +1461,11 @@ get_method (int in)
         magic[0] = imagic0;
         imagic1 = try_byte ();
         magic[1] = imagic1;
-        /* If try_byte returned EOF, magic[1] == (char) EOF.  */
+        /* If try_byte returned EOF, magic[1] == (char) EOF.
+           Although POSIX says this could cause gzip to trap
+           if EOF < CHAR_MIN < 0, no known platform is like that;
+           check to be safe.  */
+        static_assert (! (EOF < CHAR_MIN && CHAR_MIN < 0));
     } else {
         magic[0] = get_byte ();
         imagic0 = 0;
@@ -1646,8 +1613,7 @@ get_method (int in)
             header_bytes = inptr + 2*4; /* include crc and size */
         }
 
-    } else if (memcmp(magic, PKZIP_MAGIC, 2) == 0 && inptr == 2
-            && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0) {
+    } else if (first && memcmp (magic, PKZIP_MAGIC, 2) == 0) {
         /* To simplify the code, we support a zip file when alone only.
          * We are thus guaranteed that the entire local header fits in inbuf.
          */

@@ -1,5 +1,5 @@
 # Customize maint.mk                           -*- makefile -*-
-# Copyright (C) 2003-2024 Free Software Foundation, Inc.
+# Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ bootstrap-tools = autoconf,automake,gnulib
 # Now that we have better tests, make this the default.
 export VERBOSE = yes
 
-old_NEWS_hash = 9668c8800ddd8a0cc1b43dcc88b21f6a
+old_NEWS_hash = 22b9cbf3d9eeb6ca609e16dea2a47f01
 
 sc_obs_header_regex = \
   \<(STDC_HEADERS|HAVE_(LIMITS|STRING|UNISTD|STDLIB)_H)\>
@@ -104,5 +104,11 @@ export _gl_TS_unmarked_extern_vars = \
 
 _gl_TS_extern = (?:_Noreturn )?extern
 
+# Write base64-encoded (not hex) checksums into the announcement.
+announce_gen_args = --cksum-checksums
+
 # Add an exemption for sc_makefile_at_at_check.
 _makefile_at_at_check_exceptions = ' && !/MAKEINFO/'
+
+exclude_file_name_regexp--sc_codespell = ^(THANKS)$$
+codespell_ignore_words_list = nd,siz

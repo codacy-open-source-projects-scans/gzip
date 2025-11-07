@@ -1,6 +1,6 @@
 /* deflate.c -- compress data using the deflation algorithm
 
-   Copyright (C) 1999, 2006, 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2006, 2009-2025 Free Software Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
 
    This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,6 @@
 #include "tailor.h"
 #include "gzip.h"
 #include "lzw.h" /* just for consistency checking */
-#include "verify.h"
 
 /* ===========================================================================
  * Configuration parameters
@@ -131,7 +130,7 @@
 #ifndef RSYNC_WIN
 #  define RSYNC_WIN 4096
 #endif
-verify(RSYNC_WIN < MAX_DIST);
+static_assert (RSYNC_WIN < MAX_DIST);
 
 #define RSYNC_SUM_MATCH(sum) ((sum) % RSYNC_WIN == 0)
 /* Whether window sum matches magic value */
@@ -192,8 +191,8 @@ unsigned int near prev_length;
 
 unsigned near strstart;      /* start of string to insert */
 unsigned near match_start;   /* start of matching string */
-static int eofile;		   /* flag set at end of input file */
-static unsigned lookahead;	   /* number of valid bytes ahead in window */
+static int eofile;           /* Flag set at end of input file.  */
+static unsigned lookahead;   /* Number of valid bytes ahead in window.  */
 
 unsigned max_chain_length;
 /* To speed up deflation, hash chains are never searched beyond this length.
@@ -337,8 +336,9 @@ lm_init (int pack_level)
     match_init(); /* initialize the asm code */
 #endif
 
-    lookahead = read_buf((char*)window,
-                         sizeof(int) <= 2 ? (unsigned)WSIZE : 2*WSIZE);
+#define READ_BUF_SIZE (sizeof (int) <= 2 ? (unsigned) WSIZE : 2 * WSIZE)
+    static_assert (READ_BUF_SIZE < (unsigned) EOF);
+    lookahead = read_buf ((char *) window, READ_BUF_SIZE);
 
     if (lookahead == 0 || lookahead == (unsigned)EOF) {
        eofile = 1, lookahead = 0;
@@ -538,11 +538,12 @@ fill_window ()
     /* If the window is almost full and there is insufficient lookahead,
      * move the upper half to the lower one to make room in the upper half.
      */
-    if (more == (unsigned)EOF) {
+    if ((unsigned) EOF <= more) {
         /* Very unlikely, but possible on 16 bit machine if strstart == 0
          * and lookahead == 1 (input done one byte at time)
          */
-        more--;
+        static_assert (2 < (unsigned) EOF);
+        more = (unsigned) EOF - 1;
     } else if (strstart >= WSIZE+MAX_DIST) {
         /* By the IN assertion, the window is not empty so we can't confuse
          * more == 0 with more == 64K on a 16 bit machine.
