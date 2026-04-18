@@ -101,7 +101,6 @@
 /gettext.h
 /gettime.c
 /gettimeofday.c
-/glthread
 /gnulib.mk
 /ialloc.c
 /ialloc.h
