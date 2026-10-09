@@ -30,6 +30,16 @@ AM_INIT_AUTOMAKE([1.11 subdir-objects dist-xz dist-zip
                   color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.
 
+dnl gzip avoids uchar-h.
+AC_DEFINE([_QUOTEARG_AVOID_UCHAR_H], [1],
+  [Define to 1 for quotearg to not use <uchar.h>.])
+
+dnl gzip does not care about bugs detected by these macros.
+AC_DEFUN([gt_LOCALE_EN_UTF8])
+AC_DEFUN([gt_TYPE_WINT_T])
+GNULIBHEADERS_OVERRIDE_WINT_T=0
+AC_SUBST([GNULIBHEADERS_OVERRIDE_WINT_T])
+
 dnl POSIXCHECK is worthwhile for maintainers, but adds several seconds
 dnl (more than 10% execution time) to ./configure, with no benefit for
 dnl most users.  Using it to look for bugs requires:
@@ -54,7 +64,6 @@ AC_CHECK_PROG([MORE], [more], [more])
 AM_CONDITIONAL([MORE], [test "$MORE"])
 AC_CHECK_TOOL([NM], [nm], [nm])
 AC_PROG_LN_S
-AC_PROG_RANLIB
 AC_PROG_SHELL
 
 gl_EARLY
@@ -180,6 +189,7 @@ if test "$gl_gcc_warnings" = yes; then
   gl_WARN_ADD([-Wsuggest-attribute=const])
   gl_WARN_ADD([-Wsuggest-attribute=noreturn])
   gl_WARN_ADD([-Wno-format-nonliteral])
+  gl_WARN_ADD([-Wno-keyword-macro])
 
   # Enable this warning only with gcc-4.7 and newer.  With 4.6.2 20111027,
   # it suggests test.c's advance function may be pure, even though it
@@ -250,12 +260,15 @@ AC_CACHE_CHECK([for an assembler syntax supported by this package],
   [gzip_cv_assembler=no
    AS_CASE([$DEFS],
      [*NO_ASM*], [],
-     [# 'host_os?' ensures Gnulib sets host_os as usual.
-      AS_CASE([${host_os?}],
-        [*-musl* | midipix*],
+     [# 'host?' ensures Gnulib sets host as usual.
+      AS_CASE([${host?}],
+        [*-musl* | *-midipix*],
           [# Avoid a crash in musl libc's startup code,
            # because musl doesn't support TEXTRELs.
            # https://www.openwall.com/lists/musl/2020/09/25/1
+          ],
+        [i386*-openbsd*],
+          [# Avoid issue in OpenBSD i386 <https://bugs.gnu.org/81766>.
           ],
         [if cp $srcdir/lib/match.c _match.S &&
             eval "$CPP $CPPFLAGS $ASCPPFLAGS _match.S > _match.i" &&
@@ -298,11 +311,8 @@ AM_CONDITIONAL([GZIP_IS_TRANSFORMED],  [test "$GZIP_TRANSFORMED" != gzip])
 AM_CONDITIONAL([ZDIFF_IS_TRANSFORMED],  [test "$ZDIFF_TRANSFORMED" != zdiff])
 AM_CONDITIONAL([ZGREP_IS_TRANSFORMED],  [test "$ZGREP_TRANSFORMED" != zgrep])
 
-AC_C_CONST
-AC_CHECK_HEADERS_ONCE(fcntl.h limits.h memory.h time.h sys/sdt.h)
-AC_CHECK_FUNCS_ONCE([chown fchmod fchown lstat siginterrupt])
-AC_HEADER_DIRENT
-AC_TYPE_SIZE_T
+AC_CHECK_HEADERS_ONCE([sys/sdt.h])
+AC_CHECK_FUNCS_ONCE([chown fchmod fchown fdopendir openat opendir unlinkat])
 AC_TYPE_OFF_T
 
 AC_CONFIG_FILES([Makefile doc/Makefile lib/Makefile tests/Makefile])

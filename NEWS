@@ -2,10 +2,20 @@ GNU gzip NEWS                                    -*- outline -*-
 
 * Noteworthy changes in release ?.? (????-??-??) [?]
 
+
+* Noteworthy changes in release 1.15 (2026-09-20) [stable]
+
 ** Bug fixes
+
+  gzip no longer can mistakenly remove the wrong file if some other
+  process simultaneously renames a gzip destination's ancestor.
+  [bug present since the beginning]
 
   gzip -d no longer rejects PKZIP signatures, local header, and data
   descriptors.  These can appear in well-formed streamed zip files.
+  [bug present since the beginning]
+
+  gzip diagnostics now quote file names containing unusual characters.
   [bug present since the beginning]
 
   A use of uninitialized memory on some malformed inputs has been fixed.
@@ -19,6 +29,16 @@ GNU gzip NEWS                                    -*- outline -*-
   when an internal bit buffer is not properly cleared.
   [bug present since the beginning]
 
+  When decompressing an .lzh file after another .lzh file, the output is
+  no longer corrupted by the previous file's decoding table.
+  [bug present since the beginning]
+
+  gzip --synchronous no longer fails to synchronize unreadable parent
+  directories on platforms like GNU/Linux that have O_PATH, or to
+  synchronize any parent directories on platforms like FreeBSD that
+  have O_SEARCH but not O_PATH.
+  [bug introduced in gzip-1.7]
+
   On old-fashioned or limited platforms lacking mktemp, gzexe, zdiff
   and znew no longer have a race when creating a temporary file.
   [bug present since the beginning]
@@ -26,8 +46,25 @@ GNU gzip NEWS                                    -*- outline -*-
 
 ** Changes in behavior
 
+  gzip no longer insists on the "C" locale; instead, it follows the
+  typical practice of using the locale specified by the environment.
+  This change, which is needed for file name quoting, can affect the
+  format of floating-point numbers output by gzip's -l and -v options.
+  Diagnostics are still in English, though.
+
   gzip -l now reports "-Inf%" instead of "0.0%" for the infinite
   compression ratio of an empty file.
+
+  znew's -P option is now ignored, with a warning.  It was present
+  only to improve performance, and its implementation had too many
+  bugs to be worth supporting.
+
+** Platforms no longer supported
+
+  The following platforms (or earlier) are no longer supported because
+  their old multibyte libraries do not work well enough: FreeBSD 4.11
+  (2005), HP-UX 11.00 (1997), Minix 3.1.8 (2010), MS-Windows 8.1
+  (2013) via mingw without UCRT.
 
 
 * Noteworthy changes in release 1.14 (2025-04-09) [stable]

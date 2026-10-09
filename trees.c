@@ -66,10 +66,11 @@
  */
 
 #include <config.h>
-#include <ctype.h>
 
 #include "tailor.h"
 #include "gzip.h"
+
+#include <c-ctype.h>
 
 /* ===========================================================================
  * Constants
@@ -398,7 +399,7 @@ ct_init (ush *attr, int *methodp)
      * tree construction to get a canonical Huffman tree (longest code
      * all ones)
      */
-    gen_codes((ct_data near *)static_ltree, L_CODES+1);
+    gen_codes (static_ltree, L_CODES+1);
 
     /* The static distance tree is trivial: */
     for (n = 0; n < D_CODES; n++) {
@@ -607,7 +608,8 @@ gen_codes (ct_data near *tree, int max_code)
         tree[n].Code = bi_reverse(next_code[len]++, len);
 
         Tracec(tree != static_ltree, (stderr,"\nn %3d %c l %2d c %4x (%x) ",
-             n, (isgraph(n) ? n : ' '), len, tree[n].Code, next_code[len]-1u));
+                                      n, c_isgraph (n) ? n : ' ', len,
+                                      tree[n].Code, next_code[len] - 1u));
     }
 }
 
@@ -695,10 +697,10 @@ build_tree(tree_desc near *desc)
     /* At this point, the fields freq and dad are set. We can now
      * generate the bit lengths.
      */
-    gen_bitlen((tree_desc near *)desc);
+    gen_bitlen (desc);
 
     /* The field len is now set, we can generate the bit codes */
-    gen_codes ((ct_data near *)tree, max_code);
+    gen_codes (tree, max_code);
 }
 
 /* ===========================================================================
@@ -809,11 +811,11 @@ build_bl_tree ()
     int max_blindex;  /* index of last bit length code of non zero freq */
 
     /* Determine the bit length frequencies for literal and distance trees */
-    scan_tree((ct_data near *)dyn_ltree, l_desc.max_code);
-    scan_tree((ct_data near *)dyn_dtree, d_desc.max_code);
+    scan_tree (dyn_ltree, l_desc.max_code);
+    scan_tree (dyn_dtree, d_desc.max_code);
 
     /* Build the bit length tree: */
-    build_tree((tree_desc near *)(&bl_desc));
+    build_tree (&bl_desc);
     /* opt_len now includes the length of the tree representations, except
      * the lengths of the bit lengths codes and the 5+5+4 bits for the counts.
      */
@@ -855,9 +857,9 @@ send_all_trees (int lcodes, int dcodes, int blcodes)
         send_bits(bl_tree[bl_order[rank]].Len, 3);
     }
 
-    send_tree((ct_data near *)dyn_ltree, lcodes-1); /* send the literal tree */
+    send_tree (dyn_ltree, lcodes-1); /* send the literal tree */
 
-    send_tree((ct_data near *)dyn_dtree, dcodes-1); /* send the distance tree */
+    send_tree (dyn_dtree, dcodes-1); /* send the distance tree */
 }
 
 /* ===========================================================================
@@ -881,10 +883,10 @@ flush_block (char *buf, ulg stored_len, int pad, int eof)
     if (*file_type == (ush)UNKNOWN) set_file_type();
 
     /* Construct the literal and distance trees */
-    build_tree((tree_desc near *)(&l_desc));
+    build_tree (&l_desc);
     Tracev((stderr, "\nlit data: dyn %lu, stat %lu", opt_len, static_len));
 
-    build_tree((tree_desc near *)(&d_desc));
+    build_tree (&d_desc);
     Tracev((stderr, "\ndist data: dyn %lu, stat %lu", opt_len, static_len));
     /* At this point, opt_len and static_len are the total bit lengths of
      * the compressed block data, excluding the tree representations.
@@ -947,12 +949,12 @@ flush_block (char *buf, ulg stored_len, int pad, int eof)
     } else if (static_lenb == opt_lenb) {
 #endif
         send_bits((STATIC_TREES<<1)+eof, 3);
-        compress_block((ct_data near *)static_ltree, (ct_data near *)static_dtree);
+        compress_block (static_ltree, static_dtree);
         compressed_len += 3 + static_len;
     } else {
         send_bits((DYN_TREES<<1)+eof, 3);
         send_all_trees(l_desc.max_code+1, d_desc.max_code+1, max_blindex+1);
-        compress_block((ct_data near *)dyn_ltree, (ct_data near *)dyn_dtree);
+        compress_block (dyn_ltree, dyn_dtree);
         compressed_len += 3 + opt_len;
     }
     Assert (compressed_len == bits_sent, "bad compressed size");
@@ -1047,7 +1049,7 @@ compress_block (ct_data near *ltree, ct_data near *dtree)
         lc = l_buf[lx++];
         if ((flag & 1) == 0) {
             send_code(lc, ltree); /* send a literal byte */
-            Tracecv(isgraph(lc), (stderr," '%c' ", lc));
+            Tracecv (c_isgraph (lc), (stderr," '%c' ", lc));
         } else {
             /* Here, lc is the match length - MIN_MATCH */
             code = length_code[lc];

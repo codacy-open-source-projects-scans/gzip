@@ -201,33 +201,33 @@ extern int save_orig_name; /* set if original name must be saved */
  * suffix table instead of its output buffer, so it does not use put_ubyte
  * (to be cleaned up).
  */
-#define put_byte(c) {outbuf[outcnt++]=(uch)(c); if (outcnt==OUTBUFSIZ)\
+#define put_byte(c) {outbuf[outcnt++] = (c); if (outcnt==OUTBUFSIZ) \
    flush_outbuf();}
-#define put_ubyte(c) {window[outcnt++]=(uch)(c); if (outcnt==WSIZE)\
+#define put_ubyte(c) {window[outcnt++] = (c); if (outcnt==WSIZE) \
    flush_window();}
 
 /* Output a 16 bit value, lsb first */
 #define put_short(w) \
 { if (outcnt < OUTBUFSIZ-2) { \
-    outbuf[outcnt++] = (uch) ((w) & 0xff); \
-    outbuf[outcnt++] = (uch) ((ush)(w) >> 8); \
+    outbuf[outcnt++] = (w) & 0xff; \
+    outbuf[outcnt++] = (ush) {(w)} >> 8; \
   } else { \
-    put_byte((uch)((w) & 0xff)); \
-    put_byte((uch)((ush)(w) >> 8)); \
+    put_byte ((w) & 0xff); \
+    put_byte ((ush) {(w)} >> 8); \
   } \
 }
 
 /* Output a 32 bit value to the bit stream, lsb first */
 #define put_long(n) { \
     put_short((n) & 0xffff); \
-    put_short(((ulg)(n)) >> 16); \
+    put_short ((ulg) {(n)} >> 16); \
 }
 
 #define seekable()    0  /* force sequential output */
 #define translate_eol 0  /* no option -a yet */
 
 /* Macros for getting two-byte and four-byte header values */
-#define SH(p) ((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))
+#define SH(p) ((uch) {(p)[0]} | ((uch) {(p)[1]} << 8))
 #define LG(p) ((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))
 
 /* Diagnostic functions */
@@ -310,7 +310,6 @@ extern void write_buf     (int fd, voidp buf, unsigned cnt);
 extern int read_buffer    (int fd, voidp buf, unsigned int cnt);
 extern char *strlwr       (char *s);
 extern char *gzip_base_name (char *fname) _GL_ATTRIBUTE_PURE;
-extern int xunlink        (char *fname);
 extern void make_simple_name (char *name);
 extern char *add_envopt   (int *argcp, char ***argvp, char const *env);
 _Noreturn extern void gzip_error (char const *m);
@@ -320,6 +319,8 @@ _Noreturn extern void read_error (void);
 _Noreturn extern void write_err (int err);
 _Noreturn extern void write_error (void);
 extern void display_ratio (off_t num, off_t den, FILE *file);
+extern char *quotef (char const *arg);
+extern char *quotef_n (int n, char const *arg);
 
         /* in inflate.c */
 extern int gzip_inflate (void);

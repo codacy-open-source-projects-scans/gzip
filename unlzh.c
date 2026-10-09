@@ -232,12 +232,6 @@ read_c_len ()
         c = getbits(CBIT);
         for (i = 0; i < NC; i++) c_len[i] = 0;
         for (i = 0; i < 4096; i++) c_table[i] = c;
-
-        /* Needed in case LEFT and RIGHT are reused from a previous
-           LZW decompression.  It may be overkill to clear all of both
-           arrays, but nobody has had time to analyze this carefully.  */
-        memzero(left, (2 * NC - 1) * sizeof *left);
-        memzero(right, (2 * NC - 1) * sizeof *left);
     } else {
         i = 0;
         while (i < n) {
@@ -313,6 +307,19 @@ decode_p ()
 static void
 huf_decode_start ()
 {
+    /* Needed in case LEFT and RIGHT are reused from a previous
+       LZW decompression.  It may be overkill to clear all of both
+       arrays, but nobody has had time to analyze this carefully.  */
+    memzero (left, (2 * NC - 1) * sizeof *left);
+    memzero (right, (2 * NC - 1) * sizeof *right);
+
+    /* Also needed in case C_TABLE is reused from a previous LZH
+       decompression.  If a member's code lengths are all zero,
+       make_table stores no symbol in C_TABLE and skips its own
+       clearing loop, so decode_c would use the previous member's
+       table.  */
+    memzero (c_table, 4096 * sizeof *c_table);
+
     init_getbits();  blocksize = 0;
 }
 
@@ -387,7 +394,7 @@ unlzh (int in, int out)
 
     decode_start();
     while (!done) {
-        n = decode((unsigned) DICSIZ, window);
+        n = decode (DICSIZ, window);
         if (n > 0)
           write_buf (out, window, n);
     }
